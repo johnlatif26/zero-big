@@ -78,31 +78,6 @@ async function fetchRequests() {
     }
 }
 
-// ===== FETCH STATS =====
-async function fetchStats() {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-        const response = await fetch('/api/stats', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                totalRequestsEl.textContent = result.data.total;
-                pendingRequestsEl.textContent = result.data.pending;
-                completedRequestsEl.textContent = result.data.completed;
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching stats:', error);
-    }
-}
-
 // ===== RENDER TABLE =====
 function renderTable(data) {
     if (!data || data.length === 0) {
@@ -117,8 +92,6 @@ function renderTable(data) {
         const statusClass = req.status === 'completed' ? 'completed' : 'pending';
         const statusText = req.status === 'completed' ? '✅ مكتمل' : '⏳ قيد الانتظار';
         const isCompleted = req.status === 'completed';
-        const createdDate = new Date(req.createdAt);
-        const dateStr = createdDate.toLocaleDateString('ar-EG');
 
         return `
             <tr data-id="${req.id}">
@@ -126,7 +99,10 @@ function renderTable(data) {
                 <td><strong>${escapeHtml(req.fullName)}</strong></td>
                 <td>${escapeHtml(req.email)}</td>
                 <td>${escapeHtml(req.phone)}</td>
+                <td>${escapeHtml(req.projectType)}</td>
                 <td title="${escapeHtml(req.projectIdea)}">${truncate(escapeHtml(req.projectIdea), 30)}</td>
+                <td>${escapeHtml(req.features || '-')}</td>
+                <td>${escapeHtml(req.heardAbout || '-')}</td>
                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 <td>
                     <button class="btn-complete" data-id="${req.id}" ${isCompleted ? 'disabled' : ''}>
@@ -140,7 +116,6 @@ function renderTable(data) {
         `;
     }).join('');
 
-    // Attach event listeners
     document.querySelectorAll('.btn-complete').forEach(btn => {
         btn.addEventListener('click', handleComplete);
     });
@@ -202,18 +177,15 @@ async function handleComplete(e) {
 
         const result = await response.json();
 
-        // Update local data
         const req = requests.find(r => r.id === id);
         if (req) {
             req.status = 'completed';
         }
 
-        // Re-render
         renderTable(requests);
         updateStats(requests);
         updateRequestCount(requests);
 
-        // Show notification
         showNotification('✅ تم تحديث الحالة وإرسال إشعار للعميل');
 
     } catch (error) {
@@ -255,7 +227,6 @@ async function handleDelete(e) {
 
         if (!response.ok) throw new Error('Failed to delete');
 
-        // Remove from local data
         requests = requests.filter(r => r.id !== id);
 
         renderTable(requests);
@@ -323,7 +294,7 @@ function truncate(text, maxLen) {
     return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
 }
 
-// ===== POLLING FOR REAL-TIME UPDATES =====
+// ===== POLLING =====
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(() => {
@@ -351,12 +322,11 @@ async function init() {
 
 init();
 
-// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     if (pollingInterval) clearInterval(pollingInterval);
 });
 
-// Add animations
+// ===== STYLES =====
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideUp {
