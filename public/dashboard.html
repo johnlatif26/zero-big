@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zero Big - لوحة التحكم</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="header-inner">
+            <div class="logo">
+                <img src="https://i.postimg.cc/jjcsxvkS/Logo.png" alt="Zero Big" class="logo-img" />
+                <span>Zero Big</span>
+            </div>
+            <nav class="dashboard-nav">
+                <span class="dashboard-user"><i class="fas fa-user-shield"></i> المشرف</span>
+                <a href="/" class="btn-logout"><i class="fas fa-sign-out-alt"></i> خروج</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <div class="container">
+            <div class="dashboard-title">
+                <h1><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h1>
+                <span class="request-count" id="requestCount">0 طلب</span>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-inbox"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="totalRequests">0</span>
+                        <span class="stat-label">إجمالي الطلبات</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="pendingRequests">0</span>
+                        <span class="stat-label">قيد الانتظار</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="completedRequests">0</span>
+                        <span class="stat-label">مكتملة</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-wrapper">
+                <table class="requests-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الاسم</th>
+                            <th>البريد</th>
+                            <th>الهاتف</th>
+                            <th>الفكرة</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsBody">
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
+                <div class="empty-state" id="emptyState">
+                    <i class="fas fa-inbox fa-4x"></i>
+                    <p>لا توجد طلبات حتى الآن</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
