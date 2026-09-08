@@ -1,5 +1,4 @@
 // ===== DOM ELEMENTS =====
-const themeToggle = document.getElementById('themeToggle');
 const langToggle = document.getElementById('langToggle');
 const langLabel = document.getElementById('langLabel');
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -22,22 +21,12 @@ const translations = {
         'hero.subtitle': 'نحن شركة Zero Big، نقدم حلولاً برمجية مبتكرة ومتكاملة لعملائنا في جميع أنحاء العالم.',
         'hero.cta': 'اطلب مشروعك',
         'hero.portfolio': 'استعرض أعمالنا',
-        'stats.projects': 'مشروع منجز',
-        'stats.clients': 'عميل راضٍ',
-        'stats.experts': 'خبير برمجي',
-        'stats.awards': 'جائزة تقنية',
-        'services.title': 'خدماتنا المتميزة',
-        'services.subtitle': 'نقدم مجموعة شاملة من خدمات تطوير البرمجيات لتلبية احتياجات أعمالكم',
+        'services.title': 'خدماتنا',
+        'services.subtitle': 'نقدم حلولاً برمجية مبتكرة لتلبية احتياجات أعمالكم',
         'services.web.title': 'تطوير الويب',
         'services.web.desc': 'مواقع ويب متجاوبة ومتطورة باستخدام أحدث التقنيات',
         'services.mobile.title': 'تطوير التطبيقات',
         'services.mobile.desc': 'تطبيقات هواتف ذكية عالية الأداء لنظامي iOS و Android',
-        'services.cloud.title': 'الحلول السحابية',
-        'services.cloud.desc': 'حلول سحابية مرنة وقابلة للتوسع لأعمالكم',
-        'services.security.title': 'أمن المعلومات',
-        'services.security.desc': 'حماية بياناتكم وأنظمتكم بأعلى معايير الأمان',
-        'services.ai.title': 'الذكاء الاصطناعي',
-        'services.ai.desc': 'حلول ذكاء اصطناعي وتعلم آلي لتحسين أعمالكم',
         'services.analytics.title': 'تحليل البيانات',
         'services.analytics.desc': 'تحليلات متقدمة للبيانات لدعم اتخاذ القرار',
         'portfolio.title': 'أعمالنا السابقة',
@@ -80,9 +69,6 @@ const translations = {
         'testimonials.author3': 'مستشار أعمال',
         'contact.title': 'اطلب مشروعك الآن',
         'contact.subtitle': 'املأ النموذج وسنقوم بالرد عليك في أقرب وقت',
-        'contact.info.title': 'معلومات الاتصال',
-        'contact.info.address': 'مصر، القاهرة',
-        'contact.info.hours': 'الأحد - الخميس: 9 صباحاً - 6 مساءً',
         'form.fullName': 'الاسم الكامل',
         'form.email': 'البريد الإلكتروني',
         'form.phone': 'رقم التليفون',
@@ -131,22 +117,12 @@ const translations = {
         'hero.subtitle': 'We are Zero Big, providing innovative and integrated software solutions for our clients worldwide.',
         'hero.cta': 'Request Your Project',
         'hero.portfolio': 'View Our Work',
-        'stats.projects': 'Projects Done',
-        'stats.clients': 'Happy Clients',
-        'stats.experts': 'Software Experts',
-        'stats.awards': 'Tech Awards',
-        'services.title': 'Our Premium Services',
-        'services.subtitle': 'We offer a comprehensive range of software development services to meet your business needs',
+        'services.title': 'Our Services',
+        'services.subtitle': 'We provide innovative software solutions to meet your business needs',
         'services.web.title': 'Web Development',
         'services.web.desc': 'Responsive and advanced websites using the latest technologies',
         'services.mobile.title': 'App Development',
         'services.mobile.desc': 'High-performance mobile apps for iOS and Android',
-        'services.cloud.title': 'Cloud Solutions',
-        'services.cloud.desc': 'Flexible and scalable cloud solutions for your business',
-        'services.security.title': 'Information Security',
-        'services.security.desc': 'Protecting your data and systems with the highest security standards',
-        'services.ai.title': 'Artificial Intelligence',
-        'services.ai.desc': 'AI and machine learning solutions to improve your business',
         'services.analytics.title': 'Data Analytics',
         'services.analytics.desc': 'Advanced data analytics to support decision making',
         'portfolio.title': 'Our Portfolio',
@@ -189,9 +165,6 @@ const translations = {
         'testimonials.author3': 'Business Consultant',
         'contact.title': 'Request Your Project Now',
         'contact.subtitle': 'Fill out the form and we will get back to you shortly',
-        'contact.info.title': 'Contact Information',
-        'contact.info.address': 'Cairo, Egypt',
-        'contact.info.hours': 'Sun - Thu: 9 AM - 6 PM',
         'form.fullName': 'Full Name',
         'form.email': 'Email Address',
         'form.phone': 'Phone Number',
@@ -231,23 +204,6 @@ const translations = {
 };
 
 let currentLang = 'ar';
-
-// ===== DARK MODE =====
-const savedTheme = localStorage.getItem('theme') || 'light';
-if (savedTheme === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    themeToggle.querySelector('input').checked = true;
-}
-
-themeToggle.addEventListener('change', function(e) {
-    if (e.target.checked) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'light');
-    }
-});
 
 // ===== LANGUAGE TOGGLE =====
 function setLanguage(lang) {
@@ -294,43 +250,6 @@ navList.querySelectorAll('a').forEach(link => {
         navList.classList.remove('open');
     });
 });
-
-// ===== STATS ANIMATION =====
-function animateStats() {
-    const statNumbers = document.querySelectorAll('.stat-number');
-    statNumbers.forEach(stat => {
-        const target = parseInt(stat.getAttribute('data-count'));
-        if (isNaN(target)) return;
-
-        const duration = 2000;
-        const startTime = performance.now();
-
-        function update(currentTime) {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            const current = Math.floor(eased * target);
-            stat.textContent = current.toLocaleString();
-            if (progress < 1) {
-                requestAnimationFrame(update);
-            } else {
-                stat.textContent = target.toLocaleString();
-            }
-        }
-        requestAnimationFrame(update);
-    });
-}
-
-const heroSection = document.querySelector('.hero');
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            animateStats();
-            observer.unobserve(entry.target);
-        }
-    });
-}, { threshold: 0.3 });
-observer.observe(heroSection);
 
 // ===== FORM HANDLING =====
 function validateField(input) {
