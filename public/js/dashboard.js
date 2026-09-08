@@ -1,3 +1,8 @@
+/**
+ * Zero Big - Dashboard
+ * Fetches and displays project requests with real-time updates
+ */
+
 // ===== DOM ELEMENTS =====
 const requestsBody = document.getElementById('requestsBody');
 const emptyState = document.getElementById('emptyState');
@@ -6,8 +11,19 @@ const pendingRequestsEl = document.getElementById('pendingRequests');
 const completedRequestsEl = document.getElementById('completedRequests');
 const requestCountEl = document.getElementById('requestCount');
 
+// Manual Email Elements
+const manualEmailSection = document.getElementById('manualEmailSection');
+const closeEmailSection = document.getElementById('closeEmailSection');
+const emailRecipient = document.getElementById('emailRecipient');
+const emailRequestId = document.getElementById('emailRequestId');
+const emailSubject = document.getElementById('emailSubject');
+const emailMessage = document.getElementById('emailMessage');
+const sendEmailBtn = document.getElementById('sendEmailBtn');
+const emailStatus = document.getElementById('emailStatus');
+
 let requests = [];
 let pollingInterval = null;
+let selectedRequestId = null;
 
 // ===== AUTH CHECK =====
 async function checkAuth() {
@@ -108,6 +124,9 @@ function renderTable(data) {
                     <button class="btn-complete" data-id="${req.id}" ${isCompleted ? 'disabled' : ''}>
                         ${isCompleted ? 'تم ✓' : 'تم'}
                     </button>
+                    <button class="btn-email" data-id="${req.id}" data-email="${escapeHtml(req.email)}" data-name="${escapeHtml(req.fullName)}">
+                        <i class="fas fa-envelope"></i>
+                    </button>
                     <button class="btn-delete" data-id="${req.id}">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -118,6 +137,10 @@ function renderTable(data) {
 
     document.querySelectorAll('.btn-complete').forEach(btn => {
         btn.addEventListener('click', handleComplete);
+    });
+
+    document.querySelectorAll('.btn-email').forEach(btn => {
+        btn.addEventListener('click', openEmailModal);
     });
 
     document.querySelectorAll('.btn-delete').forEach(btn => {
@@ -140,6 +163,88 @@ function updateRequestCount(data) {
     const total = data.length;
     requestCountEl.textContent = `${total} طلب`;
 }
+
+// ===== OPEN EMAIL MODAL =====
+function openEmailModal(e) {
+    const btn = e.currentTarget;
+    const id = btn.dataset.id;
+    const email = btn.dataset.email;
+    const name = btn.dataset.name;
+
+    selectedRequestId = id;
+    emailRecipient.textContent = `${name} <${email}>`;
+    emailRequestId.textContent = id;
+    emailSubject.value = `📩 رسالة من فريق Zero Big - طلب #${id}`;
+    emailMessage.value = '';
+    emailStatus.textContent = '';
+    emailStatus.className = 'email-status';
+    manualEmailSection.style.display = 'block';
+    manualEmailSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== CLOSE EMAIL SECTION =====
+closeEmailSection.addEventListener('click', () => {
+    manualEmailSection.style.display = 'none';
+});
+
+// ===== SEND MANUAL EMAIL =====
+sendEmailBtn.addEventListener('click', async function() {
+    const subject = emailSubject.value.trim();
+    const message = emailMessage.value.trim();
+
+    if (!subject || !message) {
+        emailStatus.textContent = '⚠️ الرجاء إدخال عنوان ونص الرسالة';
+        emailStatus.className = 'email-status error';
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+    emailStatus.textContent = '⏳ جاري إرسال الرسالة...';
+    emailStatus.className = 'email-status info';
+
+    try {
+        const response = await fetch('/api/send-manual-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                requestId: selectedRequestId,
+                subject: subject,
+                message: message
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            emailStatus.textContent = '✅ تم إرسال الرسالة بنجاح!';
+            emailStatus.className = 'email-status success';
+            emailMessage.value = '';
+            setTimeout(() => {
+                manualEmailSection.style.display = 'none';
+            }, 3000);
+        } else {
+            emailStatus.textContent = '❌ ' + (result.message || 'فشل الإرسال');
+            emailStatus.className = 'email-status error';
+        }
+    } catch (error) {
+        console.error('Error sending email:', error);
+        emailStatus.textContent = '❌ حدث خطأ في الاتصال بالخادم';
+        emailStatus.className = 'email-status error';
+    } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الرسالة';
+    }
+});
 
 // ===== HANDLE COMPLETE =====
 async function handleComplete(e) {
@@ -186,7 +291,7 @@ async function handleComplete(e) {
         updateStats(requests);
         updateRequestCount(requests);
 
-        showNotification('✅ تم تحديث الحالة وإرسال إشعار للعميل');
+        showNotification('✅ تم تحديث حالة الطلب');
 
     } catch (error) {
         console.error('Error completing request:', error);
@@ -367,15 +472,34 @@ style.textContent = `
         transform: scale(1.02);
     }
     .btn-complete:disabled {
-        background: #9ca3af;
+        background: #475569;
         cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .btn-email {
+        padding: 6px 12px;
+        background: #059669;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-right: 6px;
+    }
+    .btn-email:hover {
+        background: #047857;
+        transform: scale(1.02);
     }
     
     .btn-delete {
         padding: 6px 12px;
         background: transparent;
-        color: #dc2626;
-        border: 1px solid #fca5a5;
+        color: #ef4444;
+        border: 1px solid #7f1d1d;
         border-radius: 6px;
         font-size: 13px;
         font-weight: 600;
@@ -385,7 +509,8 @@ style.textContent = `
         margin-right: 6px;
     }
     .btn-delete:hover {
-        background: #fee2e2;
+        background: #7f1d1d;
+        color: white;
     }
     
     .empty-state {
@@ -394,7 +519,7 @@ style.textContent = `
         align-items: center;
         justify-content: center;
         padding: 60px 20px;
-        color: #9ca3af;
+        color: #64748b;
     }
     .empty-state.show {
         display: flex;
@@ -402,6 +527,130 @@ style.textContent = `
     .empty-state i {
         margin-bottom: 16px;
         opacity: 0.3;
+        color: #2563eb;
+    }
+    .empty-state p {
+        font-size: 16px;
+    }
+
+    /* ===== MANUAL EMAIL SECTION ===== */
+    .manual-email-section {
+        background: #111827;
+        border: 1px solid #2563eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-top: 30px;
+    }
+    .manual-email-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #1e293b;
+    }
+    .manual-email-header h2 {
+        font-size: 20px;
+        color: #2563eb;
+    }
+    .manual-email-header h2 i {
+        margin-left: 10px;
+    }
+    .btn-close-email {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 20px;
+        cursor: pointer;
+        transition: color 0.3s;
+    }
+    .btn-close-email:hover {
+        color: #ef4444;
+    }
+    .manual-email-body {
+        padding: 0 4px;
+    }
+    .email-recipient {
+        background: #0a0e1a;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        color: #94a3b8;
+    }
+    .email-recipient strong {
+        color: #e8edf5;
+    }
+    .email-recipient span {
+        color: #e8edf5;
+    }
+    .manual-email-body .form-group {
+        margin-bottom: 16px;
+    }
+    .manual-email-body .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: #e8edf5;
+        font-size: 14px;
+    }
+    .manual-email-body .form-group input,
+    .manual-email-body .form-group textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 2px solid #1e293b;
+        border-radius: 8px;
+        background: #0a0e1a;
+        color: #e8edf5;
+        font-family: inherit;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+    .manual-email-body .form-group input:focus,
+    .manual-email-body .form-group textarea:focus {
+        outline: none;
+        border-color: #2563eb;
+    }
+    .btn-send-email {
+        padding: 12px 32px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-send-email:hover:not(:disabled) {
+        background: #1d4ed8;
+        transform: scale(1.02);
+    }
+    .btn-send-email:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    .email-status {
+        margin-top: 12px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .email-status.success {
+        background: #065f46;
+        color: #6ee7b7;
+    }
+    .email-status.error {
+        background: #7f1d1d;
+        color: #fca5a5;
+    }
+    .email-status.info {
+        background: #1e293b;
+        color: #94a3b8;
     }
 `;
 document.head.appendChild(style);
