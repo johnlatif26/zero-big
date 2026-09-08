@@ -367,7 +367,7 @@ successModal.addEventListener('click', (e) => {
 const header = document.querySelector('.header');
 window.addEventListener('scroll', () => {
     if (window.scrollY > 50) {
-        header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.08)';
+        header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.3)';
     } else {
         header.style.boxShadow = 'none';
     }
