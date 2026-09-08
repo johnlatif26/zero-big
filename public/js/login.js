@@ -1,8 +1,3 @@
-/**
- * Zero Big - Login Page
- * Handles admin authentication with JWT
- */
-
 const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
 
