@@ -1,6 +1,5 @@
 /* ===== CSS VARIABLES - ألوان من اللوجو ===== */
 :root {
-    /* ألوان أساسية من اللوجو */
     --bg-primary: #0a0e1a;
     --bg-secondary: #111827;
     --bg-hero: #060a14;
@@ -8,14 +7,10 @@
     --text-secondary: #94a3b8;
     --text-light: #ffffff;
     --text-muted: #64748b;
-    
-    /* الأزرق الموجود في اللوجو */
     --accent: #2563eb;
     --accent-hover: #1d4ed8;
     --accent-light: #1e293b;
     --accent-glow: rgba(37, 99, 235, 0.3);
-    
-    /* الأبيض والأسود من اللوجو */
     --card-bg: #111827;
     --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     --border-color: #1e293b;
@@ -24,7 +19,6 @@
     --section-bg: #0a0e1a;
     --footer-bg: #060a14;
     --shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-    
     --transition: 0.3s ease;
     --radius: 12px;
     --radius-sm: 8px;
@@ -125,7 +119,6 @@ body[dir="ltr"] {
     gap: 12px;
 }
 
-/* Language Toggle */
 .lang-toggle {
     display: flex;
     align-items: center;
@@ -149,7 +142,6 @@ body[dir="ltr"] {
     font-size: 16px;
 }
 
-/* Mobile Menu */
 .mobile-menu-btn {
     display: none;
     background: none;
@@ -200,10 +192,6 @@ body[dir="ltr"] {
     font-weight: 800;
     line-height: 1.2;
     margin-bottom: 20px;
-}
-
-.hero-title span {
-    color: var(--accent);
 }
 
 .hero-subtitle {
@@ -291,10 +279,6 @@ body[dir="ltr"] {
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 12px;
-}
-
-.section-header h2 span {
-    color: var(--accent);
 }
 
 .section-header p {
@@ -476,60 +460,10 @@ body[dir="ltr"] {
     color: var(--text-secondary);
 }
 
-/* ===== TESTIMONIALS ===== */
-.testimonials {
-    padding: 80px 0;
-    background: var(--section-bg);
-}
-
-.testimonials-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
-}
-
-.testimonial-card {
-    background: var(--card-bg);
-    padding: 30px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--card-shadow);
-    transition: all 0.3s;
-}
-
-.testimonial-card:hover {
-    border-color: var(--accent);
-}
-
-.testimonial-quote {
-    color: var(--accent);
-    font-size: 32px;
-    margin-bottom: 12px;
-    opacity: 0.4;
-    font-weight: 700;
-    font-family: 'Georgia', serif;
-}
-
-.testimonial-card p {
-    color: var(--text-primary);
-    font-size: 15px;
-    margin-bottom: 16px;
-}
-
-.testimonial-author strong {
-    display: block;
-    color: var(--text-primary);
-}
-
-.testimonial-author span {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
 /* ===== CONTACT / FORM ===== */
 .contact {
     padding: 80px 0;
-    background: var(--bg-primary);
+    background: var(--section-bg);
 }
 
 .contact-wrapper {
@@ -815,9 +749,6 @@ body[dir="ltr"] {
         grid-template-columns: 1fr 1fr;
     }
     .about-content {
-        grid-template-columns: 1fr;
-    }
-    .testimonials-grid {
         grid-template-columns: 1fr;
     }
     .footer-content {
