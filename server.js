@@ -7,49 +7,26 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
 
 // ============================================
-// ===== DATABASE (JSON FILE) =====
+// ===== FIREBASE ADMIN INITIALIZATION =====
 // ============================================
-const DB_FILE = path.join(__dirname, 'data.json');
+const admin = require('firebase-admin');
 
-// Ensure data.json exists
-if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ requests: [], idCounter: 1 }, null, 2));
-}
-
-// ===== READ DATABASE =====
-function readDB() {
-    try {
-        const data = fs.readFileSync(DB_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading DB:', error);
-        return { requests: [], idCounter: 1 };
-    }
-}
-
-// ===== WRITE DATABASE =====
-function writeDB(data) {
-    try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error writing DB:', error);
-        return false;
-    }
-}
-
-// ============================================
-// ===== FIREBASE INITIALIZATION =====
-// ============================================
 let firebaseConfig = null;
+let db = null;
 
 try {
     if (process.env.FIREBASE_CONFIG) {
         firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-        console.log('✅ Firebase config loaded successfully');
+        
+        // Initialize Firebase Admin
+        admin.initializeApp({
+            credential: admin.credential.cert(firebaseConfig)
+        });
+        
+        db = admin.firestore();
+        console.log('✅ Firebase Firestore initialized successfully');
     }
 } catch (error) {
     console.warn('⚠️ Firebase config not loaded:', error.message);
@@ -315,15 +292,32 @@ app.post('/api/auth/verify', (req, res) => {
 });
 
 /**
- * GET /api/requests - Fetch all project requests
+ * GET /api/requests - Fetch all project requests from Firestore
  */
-app.get('/api/requests', authenticateToken, (req, res) => {
+app.get('/api/requests', authenticateToken, async (req, res) => {
     try {
-        const db = readDB();
-        const sorted = [...db.requests].reverse();
-        res.json(sorted);
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        const snapshot = await db.collection('requests')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const requests = [];
+        snapshot.forEach(doc => {
+            requests.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        res.json(requests);
     } catch (error) {
-        console.error('Error fetching requests:', error);
+        console.error('Error fetching requests from Firestore:', error);
         res.status(500).json({
             success: false,
             message: 'حدث خطأ في جلب البيانات'
@@ -332,7 +326,7 @@ app.get('/api/requests', authenticateToken, (req, res) => {
 });
 
 /**
- * POST /api/submit-project - Submit a new project request
+ * POST /api/submit-project - Submit a new project request to Firestore
  */
 app.post('/api/submit-project', async (req, res) => {
     try {
@@ -362,12 +356,15 @@ app.post('/api/submit-project', async (req, res) => {
             });
         }
 
-        // Read current DB
-        const db = readDB();
-        
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
         // Create new request
         const newRequest = {
-            id: String(db.idCounter++),
             fullName: fullName.trim(),
             email: email.trim(),
             phone: phone.trim(),
@@ -376,17 +373,19 @@ app.post('/api/submit-project', async (req, res) => {
             features: features ? features.trim() : '',
             heardAbout: heardAbout || '',
             status: 'pending',
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         };
 
-        // Save to database
-        db.requests.push(newRequest);
-        writeDB(db);
+        // Save to Firestore
+        const docRef = await db.collection('requests').add(newRequest);
+        const requestId = docRef.id;
 
-        console.log('📝 New project request saved to DB:', newRequest.fullName);
+        console.log('📝 New project request saved to Firestore:', newRequest.fullName);
         console.log('   📧 Email:', newRequest.email);
         console.log('   📱 Phone:', newRequest.phone);
         console.log('   🏷️ Type:', newRequest.projectType);
+        console.log('   🆔 Document ID:', requestId);
 
         // Send AUTO-REPLY email
         const emailMessage = `
@@ -394,7 +393,7 @@ app.post('/api/submit-project', async (req, res) => {
                 <p>مرحباً <strong>${fullName}</strong>،</p>
                 <p>نشكركم على ثقتكم بنا في <strong style="color: #2563eb;">Zero Big</strong>.</p>
                 <p>تم استقبال طلبكم الخاص بـ <strong>${projectType}</strong> بنجاح.</p>
-                <p><strong>رقم الطلب:</strong> #${newRequest.id}</p>
+                <p><strong>رقم الطلب:</strong> #${requestId}</p>
                 <div style="background: #111827; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #1e293b;">
                     <p style="margin: 0; font-size: 18px; font-weight: 600; color: #2563eb;">
                         ✅ برجاء انتظار الرد من فريقنا
@@ -404,12 +403,15 @@ app.post('/api/submit-project', async (req, res) => {
             </div>
         `;
 
-        sendAutoReply(email, '✅ تم استقبال طلبكم - Zero Big', emailMessage, newRequest.id);
+        sendAutoReply(email, '✅ تم استقبال طلبكم - Zero Big', emailMessage, requestId);
 
         res.status(201).json({
             success: true,
             message: 'تم استقبال طلبكم بنجاح',
-            data: newRequest
+            data: {
+                id: requestId,
+                ...newRequest
+            }
         });
 
     } catch (error) {
@@ -422,21 +424,30 @@ app.post('/api/submit-project', async (req, res) => {
 });
 
 /**
- * PATCH /api/requests/:id/complete - Mark request as completed
+ * PATCH /api/requests/:id/complete - Mark request as completed in Firestore
  */
 app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const db = readDB();
-        const request = db.requests.find(r => r.id === id);
 
-        if (!request) {
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        const docRef = db.collection('requests').doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
             return res.status(404).json({
                 success: false,
                 message: 'الطلب غير موجود'
             });
         }
 
+        const request = doc.data();
         if (request.status === 'completed') {
             return res.status(400).json({
                 success: false,
@@ -444,16 +455,23 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
             });
         }
 
-        request.status = 'completed';
-        request.completedAt = new Date().toISOString();
-        writeDB(db);
+        // Update in Firestore
+        await docRef.update({
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
 
         console.log(`✅ Request ${id} completed for:`, request.fullName);
 
         res.json({
             success: true,
             message: 'تم تحديث حالة الطلب',
-            data: request
+            data: {
+                id: id,
+                ...request,
+                status: 'completed'
+            }
         });
 
     } catch (error) {
@@ -479,15 +497,24 @@ app.post('/api/send-manual-email', authenticateToken, async (req, res) => {
             });
         }
 
-        const db = readDB();
-        const request = db.requests.find(r => r.id === requestId);
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
 
-        if (!request) {
+        const docRef = db.collection('requests').doc(requestId);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
             return res.status(404).json({
                 success: false,
                 message: 'الطلب غير موجود'
             });
         }
+
+        const request = doc.data();
 
         // Send manual email
         const emailMessage = `
@@ -496,7 +523,7 @@ app.post('/api/send-manual-email', authenticateToken, async (req, res) => {
                 ${message.replace(/\n/g, '<br />')}
                 <div style="background: #111827; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #1e293b;">
                     <p style="margin: 0; font-size: 14px; color: #94a3b8;">
-                        <strong style="color: #2563eb;">رقم الطلب:</strong> #${request.id}
+                        <strong style="color: #2563eb;">رقم الطلب:</strong> #${requestId}
                     </p>
                 </div>
                 <p style="color: #94a3b8; font-size: 14px;">شكراً لثقتكم بنا.</p>
@@ -505,26 +532,27 @@ app.post('/api/send-manual-email', authenticateToken, async (req, res) => {
 
         const success = await sendManualEmail(
             request.email,
-            subject || `📩 رسالة من فريق Zero Big - طلب #${request.id}`,
+            subject || `📩 رسالة من فريق Zero Big - طلب #${requestId}`,
             emailMessage,
-            request.id
+            requestId
         );
 
         if (success) {
-            // Log the manual email sent
-            console.log(`📨 Manual email sent to ${request.email} for request #${request.id}`);
+            console.log(`📨 Manual email sent to ${request.email} for request #${requestId}`);
             
-            // Store email history in request
-            if (!request.emailHistory) {
-                request.emailHistory = [];
-            }
-            request.emailHistory.push({
+            // Store email history in Firestore
+            const emailHistory = request.emailHistory || [];
+            emailHistory.push({
                 subject: subject,
                 message: message,
                 sentAt: new Date().toISOString(),
                 sentBy: req.user.username
             });
-            writeDB(db);
+
+            await docRef.update({
+                emailHistory: emailHistory,
+                updatedAt: new Date().toISOString()
+            });
 
             res.json({
                 success: true,
@@ -547,26 +575,33 @@ app.post('/api/send-manual-email', authenticateToken, async (req, res) => {
 });
 
 /**
- * DELETE /api/requests/:id - Delete a request
+ * DELETE /api/requests/:id - Delete a request from Firestore
  */
-app.delete('/api/requests/:id', authenticateToken, (req, res) => {
+app.delete('/api/requests/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const db = readDB();
-        const index = db.requests.findIndex(r => r.id === id);
 
-        if (index === -1) {
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        const docRef = db.collection('requests').doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
             return res.status(404).json({
                 success: false,
                 message: 'الطلب غير موجود'
             });
         }
 
-        const deleted = db.requests[index];
-        db.requests.splice(index, 1);
-        writeDB(db);
+        const request = doc.data();
+        await docRef.delete();
 
-        console.log(`🗑️ Request ${id} deleted for:`, deleted.fullName);
+        console.log(`🗑️ Request ${id} deleted for:`, request.fullName);
 
         res.json({
             success: true,
@@ -583,14 +618,26 @@ app.delete('/api/requests/:id', authenticateToken, (req, res) => {
 });
 
 /**
- * GET /api/stats - Get dashboard statistics
+ * GET /api/stats - Get dashboard statistics from Firestore
  */
-app.get('/api/stats', authenticateToken, (req, res) => {
+app.get('/api/stats', authenticateToken, async (req, res) => {
     try {
-        const db = readDB();
-        const total = db.requests.length;
-        const pending = db.requests.filter(r => r.status === 'pending').length;
-        const completed = db.requests.filter(r => r.status === 'completed').length;
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        const snapshot = await db.collection('requests').get();
+        const requests = [];
+        snapshot.forEach(doc => {
+            requests.push(doc.data());
+        });
+
+        const total = requests.length;
+        const pending = requests.filter(r => r.status === 'pending').length;
+        const completed = requests.filter(r => r.status === 'completed').length;
 
         res.json({
             success: true,
@@ -649,7 +696,7 @@ app.listen(PORT, () => {
     ║                                                                      ║
     ║   📧 AUTO SMTP: ${process.env.AUTO_SMTP_USER ? '✅ Configured' : '❌ Not configured'}
     ║   📧 MANUAL SMTP: ${process.env.MANUAL_SMTP_USER ? '✅ Configured' : '❌ Not configured'}
-    ║   📁 Database: ${DB_FILE}
+    ║   🔥 Firestore: ${db ? '✅ Connected' : '❌ Not connected'}
     ║                                                                      ║
     ╚══════════════════════════════════════════════════════════════════════╝
     `);
