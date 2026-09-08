@@ -1,9 +1,13 @@
-/**
- * Zero Big - Dashboard
- * Fetches and displays project requests with real-time updates
- */
-
 // ===== DOM ELEMENTS =====
+// Navigation
+const navRequests = document.getElementById('navRequests');
+const navMessages = document.getElementById('navMessages');
+const navSendMessage = document.getElementById('navSendMessage');
+const sectionRequests = document.getElementById('sectionRequests');
+const sectionMessages = document.getElementById('sectionMessages');
+const sectionSendMessage = document.getElementById('sectionSendMessage');
+
+// Requests
 const requestsBody = document.getElementById('requestsBody');
 const emptyState = document.getElementById('emptyState');
 const totalRequestsEl = document.getElementById('totalRequests');
@@ -11,21 +15,63 @@ const pendingRequestsEl = document.getElementById('pendingRequests');
 const completedRequestsEl = document.getElementById('completedRequests');
 const requestCountEl = document.getElementById('requestCount');
 
-// Manual Email Elements
-const manualEmailSection = document.getElementById('manualEmailSection');
-const closeEmailSection = document.getElementById('closeEmailSection');
-const emailRecipient = document.getElementById('emailRecipient');
-const emailRequestId = document.getElementById('emailRequestId');
-const emailSubject = document.getElementById('emailSubject');
-const emailMessage = document.getElementById('emailMessage');
-const sendEmailBtn = document.getElementById('sendEmailBtn');
-const emailStatus = document.getElementById('emailStatus');
+// Messages
+const messagesBody = document.getElementById('messagesBody');
+const emptyMessages = document.getElementById('emptyMessages');
+const sentMessagesEl = document.getElementById('sentMessages');
+const readMessagesEl = document.getElementById('readMessages');
+const unreadMessagesEl = document.getElementById('unreadMessages');
+const messageCountEl = document.getElementById('messageCount');
+const messageBadge = document.getElementById('messageBadge');
+
+// Send Message
+const sendEmailTo = document.getElementById('sendEmailTo');
+const sendSubject = document.getElementById('sendSubject');
+const sendMessage = document.getElementById('sendMessage');
+const sendNewMessageBtn = document.getElementById('sendNewMessageBtn');
+const sendMessageStatus = document.getElementById('sendMessageStatus');
 
 let requests = [];
+let messages = [];
 let pollingInterval = null;
-let selectedRequestId = null;
 
+// ============================================
+// ===== NAVIGATION =====
+// ============================================
+
+function showSection(section) {
+    // Hide all sections
+    sectionRequests.style.display = 'none';
+    sectionMessages.style.display = 'none';
+    sectionSendMessage.style.display = 'none';
+    
+    // Remove active class from all nav buttons
+    navRequests.classList.remove('active');
+    navMessages.classList.remove('active');
+    navSendMessage.classList.remove('active');
+    
+    // Show selected section
+    if (section === 'requests') {
+        sectionRequests.style.display = 'block';
+        navRequests.classList.add('active');
+    } else if (section === 'messages') {
+        sectionMessages.style.display = 'block';
+        navMessages.classList.add('active');
+        fetchMessages();
+    } else if (section === 'send') {
+        sectionSendMessage.style.display = 'block';
+        navSendMessage.classList.add('active');
+    }
+}
+
+navRequests.addEventListener('click', () => showSection('requests'));
+navMessages.addEventListener('click', () => showSection('messages'));
+navSendMessage.addEventListener('click', () => showSection('send'));
+
+// ============================================
 // ===== AUTH CHECK =====
+// ============================================
+
 async function checkAuth() {
     const token = localStorage.getItem('token');
 
@@ -58,7 +104,10 @@ async function checkAuth() {
     }
 }
 
+// ============================================
 // ===== FETCH REQUESTS =====
+// ============================================
+
 async function fetchRequests() {
     const token = localStorage.getItem('token');
 
@@ -86,7 +135,7 @@ async function fetchRequests() {
 
         const data = await response.json();
         requests = data;
-        renderTable(requests);
+        renderRequests(requests);
         updateStats(requests);
         updateRequestCount(requests);
     } catch (error) {
@@ -94,8 +143,46 @@ async function fetchRequests() {
     }
 }
 
-// ===== RENDER TABLE =====
-function renderTable(data) {
+// ============================================
+// ===== FETCH MESSAGES =====
+// ============================================
+
+async function fetchMessages() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/messages', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('isLoggedIn');
+            window.location.href = '/login';
+            return;
+        }
+
+        if (!response.ok) throw new Error('Failed to fetch messages');
+
+        const data = await response.json();
+        messages = data;
+        renderMessages(messages);
+        updateMessageStats(messages);
+        updateMessageBadge(messages);
+    } catch (error) {
+        console.error('Error fetching messages:', error);
+    }
+}
+
+// ============================================
+// ===== RENDER REQUESTS =====
+// ============================================
+
+function renderRequests(data) {
     if (!data || data.length === 0) {
         requestsBody.innerHTML = '';
         emptyState.classList.add('show');
@@ -124,9 +211,6 @@ function renderTable(data) {
                     <button class="btn-complete" data-id="${req.id}" ${isCompleted ? 'disabled' : ''}>
                         ${isCompleted ? 'تم ✓' : 'تم'}
                     </button>
-                    <button class="btn-email" data-id="${req.id}" data-email="${escapeHtml(req.email)}" data-name="${escapeHtml(req.fullName)}">
-                        <i class="fas fa-envelope"></i>
-                    </button>
                     <button class="btn-delete" data-id="${req.id}">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -139,16 +223,48 @@ function renderTable(data) {
         btn.addEventListener('click', handleComplete);
     });
 
-    document.querySelectorAll('.btn-email').forEach(btn => {
-        btn.addEventListener('click', openEmailModal);
-    });
-
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', handleDelete);
     });
 }
 
+// ============================================
+// ===== RENDER MESSAGES =====
+// ============================================
+
+function renderMessages(data) {
+    if (!data || data.length === 0) {
+        messagesBody.innerHTML = '';
+        emptyMessages.classList.add('show');
+        return;
+    }
+
+    emptyMessages.classList.remove('show');
+
+    messagesBody.innerHTML = data.map((msg, index) => {
+        const statusClass = msg.status === 'read' ? 'read' : 'unread';
+        const statusText = msg.status === 'read' ? '✅ متشافه' : '⏳ متشافتش';
+        const sentDate = new Date(msg.sentAt);
+        const dateStr = sentDate.toLocaleDateString('ar-EG') + ' ' + sentDate.toLocaleTimeString('ar-EG');
+
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td><strong>${escapeHtml(msg.recipientName || msg.recipientEmail)}</strong></td>
+                <td>${escapeHtml(msg.recipientEmail)}</td>
+                <td>${escapeHtml(msg.subject)}</td>
+                <td title="${escapeHtml(msg.message)}">${truncate(escapeHtml(msg.message), 40)}</td>
+                <td>${dateStr}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ============================================
 // ===== UPDATE STATS =====
+// ============================================
+
 function updateStats(data) {
     const total = data.length;
     const pending = data.filter(r => r.status === 'pending').length;
@@ -164,89 +280,28 @@ function updateRequestCount(data) {
     requestCountEl.textContent = `${total} طلب`;
 }
 
-// ===== OPEN EMAIL MODAL =====
-function openEmailModal(e) {
-    const btn = e.currentTarget;
-    const id = btn.dataset.id;
-    const email = btn.dataset.email;
-    const name = btn.dataset.name;
+function updateMessageStats(data) {
+    const total = data.length;
+    const sent = data.length;
+    const read = data.filter(m => m.status === 'read').length;
+    const unread = data.filter(m => m.status === 'unread' || !m.status).length;
 
-    selectedRequestId = id;
-    emailRecipient.textContent = `${name} <${email}>`;
-    emailRequestId.textContent = id;
-    emailSubject.value = `📩 رسالة من فريق Zero Big - طلب #${id}`;
-    emailMessage.value = '';
-    emailStatus.textContent = '';
-    emailStatus.className = 'email-status';
-    manualEmailSection.style.display = 'block';
-    manualEmailSection.scrollIntoView({ behavior: 'smooth' });
+    sentMessagesEl.textContent = sent;
+    readMessagesEl.textContent = read;
+    unreadMessagesEl.textContent = unread;
+    messageCountEl.textContent = `${total} رسالة`;
 }
 
-// ===== CLOSE EMAIL SECTION =====
-closeEmailSection.addEventListener('click', () => {
-    manualEmailSection.style.display = 'none';
-});
+function updateMessageBadge(data) {
+    const unread = data.filter(m => m.status === 'unread' || !m.status).length;
+    messageBadge.textContent = unread;
+    messageBadge.style.display = unread > 0 ? 'inline-block' : 'none';
+}
 
-// ===== SEND MANUAL EMAIL =====
-sendEmailBtn.addEventListener('click', async function() {
-    const subject = emailSubject.value.trim();
-    const message = emailMessage.value.trim();
-
-    if (!subject || !message) {
-        emailStatus.textContent = '⚠️ الرجاء إدخال عنوان ونص الرسالة';
-        emailStatus.className = 'email-status error';
-        return;
-    }
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = '/login';
-        return;
-    }
-
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-    emailStatus.textContent = '⏳ جاري إرسال الرسالة...';
-    emailStatus.className = 'email-status info';
-
-    try {
-        const response = await fetch('/api/send-manual-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                requestId: selectedRequestId,
-                subject: subject,
-                message: message
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            emailStatus.textContent = '✅ تم إرسال الرسالة بنجاح!';
-            emailStatus.className = 'email-status success';
-            emailMessage.value = '';
-            setTimeout(() => {
-                manualEmailSection.style.display = 'none';
-            }, 3000);
-        } else {
-            emailStatus.textContent = '❌ ' + (result.message || 'فشل الإرسال');
-            emailStatus.className = 'email-status error';
-        }
-    } catch (error) {
-        console.error('Error sending email:', error);
-        emailStatus.textContent = '❌ حدث خطأ في الاتصال بالخادم';
-        emailStatus.className = 'email-status error';
-    } finally {
-        this.disabled = false;
-        this.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الرسالة';
-    }
-});
-
+// ============================================
 // ===== HANDLE COMPLETE =====
+// ============================================
+
 async function handleComplete(e) {
     const btn = e.currentTarget;
     const id = btn.dataset.id;
@@ -280,14 +335,14 @@ async function handleComplete(e) {
 
         if (!response.ok) throw new Error('Failed to update');
 
-        const result = await response.json();
+        await response.json();
 
         const req = requests.find(r => r.id === id);
         if (req) {
             req.status = 'completed';
         }
 
-        renderTable(requests);
+        renderRequests(requests);
         updateStats(requests);
         updateRequestCount(requests);
 
@@ -301,7 +356,10 @@ async function handleComplete(e) {
     }
 }
 
+// ============================================
 // ===== HANDLE DELETE =====
+// ============================================
+
 async function handleDelete(e) {
     const btn = e.currentTarget;
     const id = btn.dataset.id;
@@ -334,7 +392,7 @@ async function handleDelete(e) {
 
         requests = requests.filter(r => r.id !== id);
 
-        renderTable(requests);
+        renderRequests(requests);
         updateStats(requests);
         updateRequestCount(requests);
 
@@ -346,7 +404,74 @@ async function handleDelete(e) {
     }
 }
 
+// ============================================
+// ===== SEND NEW MESSAGE =====
+// ============================================
+
+sendNewMessageBtn.addEventListener('click', async function() {
+    const to = sendEmailTo.value.trim();
+    const subject = sendSubject.value.trim();
+    const message = sendMessage.value.trim();
+
+    if (!to || !subject || !message) {
+        sendMessageStatus.textContent = '⚠️ الرجاء إدخال جميع الحقول';
+        sendMessageStatus.className = 'email-status error';
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+    sendMessageStatus.textContent = '⏳ جاري إرسال الرسالة...';
+    sendMessageStatus.className = 'email-status info';
+
+    try {
+        const response = await fetch('/api/send-manual-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                to: to,
+                subject: subject,
+                message: message
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            sendMessageStatus.textContent = '✅ تم إرسال الرسالة بنجاح!';
+            sendMessageStatus.className = 'email-status success';
+            sendEmailTo.value = '';
+            sendSubject.value = '';
+            sendMessage.value = '';
+            // Refresh messages
+            fetchMessages();
+        } else {
+            sendMessageStatus.textContent = '❌ ' + (result.message || 'فشل الإرسال');
+            sendMessageStatus.className = 'email-status error';
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        sendMessageStatus.textContent = '❌ حدث خطأ في الاتصال بالخادم';
+        sendMessageStatus.className = 'email-status error';
+    } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الرسالة';
+    }
+});
+
+// ============================================
 // ===== NOTIFICATION =====
+// ============================================
+
 function showNotification(message, type = 'success') {
     const existing = document.querySelector('.dashboard-notification');
     if (existing) existing.remove();
@@ -386,7 +511,10 @@ function showNotification(message, type = 'success') {
     }, 4000);
 }
 
+// ============================================
 // ===== UTILITY FUNCTIONS =====
+// ============================================
+
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -399,15 +527,24 @@ function truncate(text, maxLen) {
     return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
 }
 
+// ============================================
 // ===== POLLING =====
+// ============================================
+
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(() => {
         fetchRequests();
+        if (sectionMessages.style.display !== 'none') {
+            fetchMessages();
+        }
     }, 5000);
 }
 
+// ============================================
 // ===== LOGOUT =====
+// ============================================
+
 document.querySelector('.btn-logout')?.addEventListener('click', function(e) {
     e.preventDefault();
     localStorage.removeItem('token');
@@ -416,12 +553,17 @@ document.querySelector('.btn-logout')?.addEventListener('click', function(e) {
     window.location.href = '/login';
 });
 
+// ============================================
 // ===== INIT =====
+// ============================================
+
 async function init() {
     const isAuth = await checkAuth();
     if (isAuth) {
         await fetchRequests();
+        await fetchMessages();
         startPolling();
+        showSection('requests');
     }
 }
 
@@ -431,7 +573,10 @@ window.addEventListener('beforeunload', () => {
     if (pollingInterval) clearInterval(pollingInterval);
 });
 
+// ============================================
 // ===== STYLES =====
+// ============================================
+
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideUp {
@@ -439,177 +584,72 @@ style.textContent = `
         to { opacity: 1; transform: translateY(0); }
     }
     
-    .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
+    /* Navigation Buttons */
+    .nav-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 14px;
         font-weight: 600;
+        font-family: 'Cairo', sans-serif;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
     }
-    .status-badge.pending {
-        background: #fef3c7;
-        color: #d97706;
+    .nav-btn:hover {
+        background: rgba(37, 99, 235, 0.1);
+        color: #e8edf5;
     }
-    .status-badge.completed {
+    .nav-btn.active {
+        background: rgba(37, 99, 235, 0.15);
+        color: #2563eb;
+    }
+    .nav-btn .badge {
+        background: #ef4444;
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        display: none;
+        min-width: 18px;
+        text-align: center;
+    }
+    .nav-btn .badge.show {
+        display: inline-block;
+    }
+    
+    .dashboard-user {
+        margin-right: 16px;
+    }
+    
+    .section-content {
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Status Badge for Messages */
+    .status-badge.read {
         background: #d1fae5;
         color: #059669;
     }
-    
-    .btn-complete {
-        padding: 6px 16px;
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        font-family: inherit;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    .btn-complete:hover:not(:disabled) {
-        background: #1d4ed8;
-        transform: scale(1.02);
-    }
-    .btn-complete:disabled {
-        background: #475569;
-        cursor: not-allowed;
-        opacity: 0.6;
+    .status-badge.unread {
+        background: #fef3c7;
+        color: #d97706;
     }
     
-    .btn-email {
-        padding: 6px 12px;
-        background: #059669;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        font-family: inherit;
-        cursor: pointer;
-        transition: all 0.3s;
-        margin-right: 6px;
-    }
-    .btn-email:hover {
-        background: #047857;
-        transform: scale(1.02);
-    }
-    
-    .btn-delete {
-        padding: 6px 12px;
-        background: transparent;
-        color: #ef4444;
-        border: 1px solid #7f1d1d;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        font-family: inherit;
-        cursor: pointer;
-        transition: all 0.3s;
-        margin-right: 6px;
-    }
-    .btn-delete:hover {
-        background: #7f1d1d;
-        color: white;
-    }
-    
-    .empty-state {
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 60px 20px;
-        color: #64748b;
-    }
-    .empty-state.show {
-        display: flex;
-    }
-    .empty-state i {
-        margin-bottom: 16px;
-        opacity: 0.3;
-        color: #2563eb;
-    }
-    .empty-state p {
-        font-size: 16px;
-    }
-
-    /* ===== MANUAL EMAIL SECTION ===== */
-    .manual-email-section {
-        background: #111827;
-        border: 1px solid #2563eb;
-        border-radius: 12px;
-        padding: 24px;
-        margin-top: 30px;
-    }
-    .manual-email-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #1e293b;
-    }
-    .manual-email-header h2 {
-        font-size: 20px;
-        color: #2563eb;
-    }
-    .manual-email-header h2 i {
-        margin-left: 10px;
-    }
-    .btn-close-email {
-        background: none;
-        border: none;
-        color: #94a3b8;
-        font-size: 20px;
-        cursor: pointer;
-        transition: color 0.3s;
-    }
-    .btn-close-email:hover {
-        color: #ef4444;
-    }
-    .manual-email-body {
-        padding: 0 4px;
-    }
-    .email-recipient {
-        background: #0a0e1a;
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin-bottom: 16px;
-        color: #94a3b8;
-    }
-    .email-recipient strong {
-        color: #e8edf5;
-    }
-    .email-recipient span {
-        color: #e8edf5;
-    }
-    .manual-email-body .form-group {
-        margin-bottom: 16px;
-    }
-    .manual-email-body .form-group label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 4px;
-        color: #e8edf5;
-        font-size: 14px;
-    }
-    .manual-email-body .form-group input,
-    .manual-email-body .form-group textarea {
-        width: 100%;
-        padding: 12px 14px;
-        border: 2px solid #1e293b;
-        border-radius: 8px;
-        background: #0a0e1a;
-        color: #e8edf5;
-        font-family: inherit;
-        font-size: 14px;
-        transition: border-color 0.3s;
-    }
-    .manual-email-body .form-group input:focus,
-    .manual-email-body .form-group textarea:focus {
-        outline: none;
-        border-color: #2563eb;
-    }
     .btn-send-email {
         padding: 12px 32px;
         background: #2563eb;
@@ -633,6 +673,7 @@ style.textContent = `
         opacity: 0.7;
         cursor: not-allowed;
     }
+    
     .email-status {
         margin-top: 12px;
         padding: 10px 16px;
