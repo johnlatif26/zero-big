@@ -254,6 +254,25 @@ body {
     opacity: 0.6;
 }
 
+.btn-email {
+    padding: 6px 12px;
+    background: #059669;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-right: 6px;
+}
+
+.btn-email:hover {
+    background: #047857;
+    transform: scale(1.02);
+}
+
 .btn-delete {
     padding: 6px 12px;
     background: transparent;
@@ -297,6 +316,146 @@ body {
     font-size: 16px;
 }
 
+/* ===== MANUAL EMAIL SECTION ===== */
+.manual-email-section {
+    background: #111827;
+    border: 1px solid #2563eb;
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 30px;
+}
+
+.manual-email-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #1e293b;
+}
+
+.manual-email-header h2 {
+    font-size: 20px;
+    color: #2563eb;
+}
+
+.manual-email-header h2 i {
+    margin-left: 10px;
+}
+
+.btn-close-email {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 20px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.btn-close-email:hover {
+    color: #ef4444;
+}
+
+.manual-email-body {
+    padding: 0 4px;
+}
+
+.email-recipient {
+    background: #0a0e1a;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    color: #94a3b8;
+}
+
+.email-recipient strong {
+    color: #e8edf5;
+}
+
+.email-recipient span {
+    color: #e8edf5;
+}
+
+.manual-email-body .form-group {
+    margin-bottom: 16px;
+}
+
+.manual-email-body .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #e8edf5;
+    font-size: 14px;
+}
+
+.manual-email-body .form-group input,
+.manual-email-body .form-group textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #1e293b;
+    border-radius: 8px;
+    background: #0a0e1a;
+    color: #e8edf5;
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.manual-email-body .form-group input:focus,
+.manual-email-body .form-group textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.btn-send-email {
+    padding: 12px 32px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-send-email:hover:not(:disabled) {
+    background: #1d4ed8;
+    transform: scale(1.02);
+}
+
+.btn-send-email:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.email-status {
+    margin-top: 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.email-status.success {
+    background: #065f46;
+    color: #6ee7b7;
+}
+
+.email-status.error {
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+
+.email-status.info {
+    background: #1e293b;
+    color: #94a3b8;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1024px) {
     .stats-cards {
@@ -311,7 +470,7 @@ body {
 
     .requests-table {
         font-size: 13px;
-        min-width: 900px;
+        min-width: 1000px;
     }
 
     .requests-table th,
@@ -324,6 +483,7 @@ body {
     }
 
     .btn-complete,
+    .btn-email,
     .btn-delete {
         padding: 4px 10px;
         font-size: 12px;
@@ -344,5 +504,8 @@ body {
     .dashboard-title {
         flex-direction: column;
         align-items: flex-start;
+    }
+    .manual-email-section {
+        padding: 16px;
     }
 }
