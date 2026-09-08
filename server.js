@@ -136,7 +136,7 @@ async function sendAutoReply(toEmail, subject, message, requestId = null) {
                     <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #1e293b; text-align: center; font-size: 13px; color: #64748b;">
                         <p style="margin: 0;">Zero Big - نبني المستقبل الرقمي معاً</p>
                         <p style="margin: 5px 0 0;">
-                            <a href="https://zerobig.com" style="color: #2563eb; text-decoration: none;">www.zerobig.com</a>
+                            <a href="https://zero-big.vercel.app" style="color: #2563eb; text-decoration: none;">https://zero-big.vercel.app</a>
                         </p>
                         <p style="margin: 10px 0 0; font-size: 11px; color: #475569;">
                             هذا بريد آلي، يرجى عدم الرد على هذا البريد.
@@ -191,7 +191,7 @@ async function sendManualEmail(toEmail, subject, message, requestId = null) {
                     <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #1e293b; text-align: center; font-size: 13px; color: #64748b;">
                         <p style="margin: 0;">Zero Big - فريق الدعم الفني</p>
                         <p style="margin: 5px 0 0;">
-                            <a href="https://zerobig.com" style="color: #2563eb; text-decoration: none;">www.zerobig.com</a>
+                            <a href="https://zero-big.vercel.app" style="color: #2563eb; text-decoration: none;">https://zero-big.vercel.app</a>
                         </p>
                         <p style="margin: 10px 0 0; font-size: 11px; color: #475569;">
                             هذا بريد آلي، يرجى عدم الرد على هذا البريد.
