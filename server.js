@@ -1,4 +1,3 @@
-// ===== LOAD ENVIRONMENT VARIABLES =====
 require('dotenv').config();
 
 const express = require('express');
@@ -291,6 +290,10 @@ app.post('/api/auth/verify', (req, res) => {
     }
 });
 
+// ============================================
+// ===== REQUESTS ROUTES =====
+// ============================================
+
 /**
  * GET /api/requests - Fetch all project requests from Firestore
  */
@@ -484,97 +487,6 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
 });
 
 /**
- * POST /api/send-manual-email - Send manual email from dashboard
- */
-app.post('/api/send-manual-email', authenticateToken, async (req, res) => {
-    try {
-        const { requestId, subject, message } = req.body;
-
-        if (!requestId || !subject || !message) {
-            return res.status(400).json({
-                success: false,
-                message: 'جميع الحقول مطلوبة (requestId, subject, message)'
-            });
-        }
-
-        if (!db) {
-            return res.status(500).json({
-                success: false,
-                message: 'Firestore not initialized'
-            });
-        }
-
-        const docRef = db.collection('requests').doc(requestId);
-        const doc = await docRef.get();
-
-        if (!doc.exists) {
-            return res.status(404).json({
-                success: false,
-                message: 'الطلب غير موجود'
-            });
-        }
-
-        const request = doc.data();
-
-        // Send manual email
-        const emailMessage = `
-            <div style="font-size: 16px; line-height: 1.8;">
-                <p>مرحباً <strong>${request.fullName}</strong>،</p>
-                ${message.replace(/\n/g, '<br />')}
-                <div style="background: #111827; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #1e293b;">
-                    <p style="margin: 0; font-size: 14px; color: #94a3b8;">
-                        <strong style="color: #2563eb;">رقم الطلب:</strong> #${requestId}
-                    </p>
-                </div>
-                <p style="color: #94a3b8; font-size: 14px;">شكراً لثقتكم بنا.</p>
-            </div>
-        `;
-
-        const success = await sendManualEmail(
-            request.email,
-            subject || `📩 رسالة من فريق Zero Big - طلب #${requestId}`,
-            emailMessage,
-            requestId
-        );
-
-        if (success) {
-            console.log(`📨 Manual email sent to ${request.email} for request #${requestId}`);
-            
-            // Store email history in Firestore
-            const emailHistory = request.emailHistory || [];
-            emailHistory.push({
-                subject: subject,
-                message: message,
-                sentAt: new Date().toISOString(),
-                sentBy: req.user.username
-            });
-
-            await docRef.update({
-                emailHistory: emailHistory,
-                updatedAt: new Date().toISOString()
-            });
-
-            res.json({
-                success: true,
-                message: 'تم إرسال البريد الإلكتروني بنجاح'
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                message: 'فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP'
-            });
-        }
-
-    } catch (error) {
-        console.error('Error sending manual email:', error);
-        res.status(500).json({
-            success: false,
-            message: 'حدث خطأ في الخادم'
-        });
-    }
-});
-
-/**
  * DELETE /api/requests/:id - Delete a request from Firestore
  */
 app.delete('/api/requests/:id', authenticateToken, async (req, res) => {
@@ -649,6 +561,224 @@ app.get('/api/stats', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         console.error('Error getting stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'حدث خطأ في الخادم'
+        });
+    }
+});
+
+// ============================================
+// ===== MESSAGES ROUTES =====
+// ============================================
+
+/**
+ * GET /api/messages - Fetch all messages from Firestore
+ */
+app.get('/api/messages', authenticateToken, async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        const snapshot = await db.collection('messages')
+            .orderBy('sentAt', 'desc')
+            .get();
+
+        const messages = [];
+        snapshot.forEach(doc => {
+            messages.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        res.json(messages);
+    } catch (error) {
+        console.error('Error fetching messages from Firestore:', error);
+        res.status(500).json({
+            success: false,
+            message: 'حدث خطأ في جلب الرسائل'
+        });
+    }
+});
+
+/**
+ * POST /api/send-manual-email - Send manual email and save to Firestore
+ */
+app.post('/api/send-manual-email', authenticateToken, async (req, res) => {
+    try {
+        const { to, subject, message, requestId } = req.body;
+
+        if (!to || !subject || !message) {
+            return res.status(400).json({
+                success: false,
+                message: 'جميع الحقول مطلوبة (to, subject, message)'
+            });
+        }
+
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        // Get sender info
+        let recipientName = to;
+        let requestData = null;
+
+        // If requestId is provided, get the request data
+        if (requestId) {
+            const docRef = db.collection('requests').doc(requestId);
+            const doc = await docRef.get();
+            if (doc.exists) {
+                requestData = doc.data();
+                recipientName = requestData.fullName || to;
+            }
+        }
+
+        // Send manual email
+        const emailMessage = `
+            <div style="font-size: 16px; line-height: 1.8;">
+                <p>مرحباً <strong>${recipientName}</strong>،</p>
+                ${message.replace(/\n/g, '<br />')}
+                ${requestId ? `
+                <div style="background: #111827; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #1e293b;">
+                    <p style="margin: 0; font-size: 14px; color: #94a3b8;">
+                        <strong style="color: #2563eb;">رقم الطلب:</strong> #${requestId}
+                    </p>
+                </div>
+                ` : ''}
+                <p style="color: #94a3b8; font-size: 14px;">شكراً لثقتكم بنا.</p>
+            </div>
+        `;
+
+        const success = await sendManualEmail(
+            to,
+            subject || `📩 رسالة من فريق Zero Big`,
+            emailMessage,
+            requestId
+        );
+
+        if (success) {
+            // Save message to Firestore
+            const messageData = {
+                recipientEmail: to,
+                recipientName: recipientName,
+                subject: subject,
+                message: message,
+                requestId: requestId || null,
+                status: 'unread',
+                sentAt: new Date().toISOString(),
+                sentBy: req.user.username
+            };
+
+            await db.collection('messages').add(messageData);
+
+            console.log(`📨 Manual email saved to Firestore for:`, to);
+
+            res.json({
+                success: true,
+                message: 'تم إرسال الرسالة بنجاح'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error sending manual email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'حدث خطأ في الخادم'
+        });
+    }
+});
+
+/**
+ * PATCH /api/messages/:id/read - Mark message as read
+ */
+app.patch('/api/messages/:id/read', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        const docRef = db.collection('messages').doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({
+                success: false,
+                message: 'الرسالة غير موجودة'
+            });
+        }
+
+        await docRef.update({
+            status: 'read',
+            readAt: new Date().toISOString()
+        });
+
+        res.json({
+            success: true,
+            message: 'تم تحديث حالة الرسالة'
+        });
+
+    } catch (error) {
+        console.error('Error marking message as read:', error);
+        res.status(500).json({
+            success: false,
+            message: 'حدث خطأ في الخادم'
+        });
+    }
+});
+
+/**
+ * DELETE /api/messages/:id - Delete a message from Firestore
+ */
+app.delete('/api/messages/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!db) {
+            return res.status(500).json({
+                success: false,
+                message: 'Firestore not initialized'
+            });
+        }
+
+        const docRef = db.collection('messages').doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({
+                success: false,
+                message: 'الرسالة غير موجودة'
+            });
+        }
+
+        await docRef.delete();
+
+        console.log(`🗑️ Message ${id} deleted`);
+
+        res.json({
+            success: true,
+            message: 'تم حذف الرسالة بنجاح'
+        });
+
+    } catch (error) {
+        console.error('Error deleting message:', error);
         res.status(500).json({
             success: false,
             message: 'حدث خطأ في الخادم'
