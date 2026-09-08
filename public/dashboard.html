@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/dashboard.css" />
 </head>
 <body>
+    <!-- ===== HEADER ===== -->
     <header class="dashboard-header">
         <div class="header-inner">
             <div class="logo">
@@ -18,97 +19,180 @@
                 <span>Zero Big</span>
             </div>
             <nav class="dashboard-nav">
+                <!-- زر الطلبات -->
+                <button class="nav-btn active" id="navRequests">
+                    <i class="fas fa-list"></i> الطلبات
+                </button>
+                <!-- زر الرسائل -->
+                <button class="nav-btn" id="navMessages">
+                    <i class="fas fa-envelope"></i> الرسائل
+                    <span class="badge" id="messageBadge">0</span>
+                </button>
+                <!-- زر إرسال رسالة -->
+                <button class="nav-btn" id="navSendMessage">
+                    <i class="fas fa-paper-plane"></i> إرسال رسالة
+                </button>
                 <span class="dashboard-user"><i class="fas fa-user-shield"></i> المشرف</span>
                 <a href="/" class="btn-logout"><i class="fas fa-sign-out-alt"></i> خروج</a>
             </nav>
         </div>
     </header>
 
+    <!-- ===== MAIN CONTENT ===== -->
     <main class="dashboard-main">
         <div class="container">
-            <div class="dashboard-title">
-                <h1><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h1>
-                <span class="request-count" id="requestCount">0 طلب</span>
+
+            <!-- ========================================== -->
+            <!-- ===== SECTION 1: صفحة الطلبات ===== -->
+            <!-- ========================================== -->
+            <div id="sectionRequests" class="section-content">
+                <div class="dashboard-title">
+                    <h1><i class="fas fa-tachometer-alt"></i> لوحة التحكم - الطلبات</h1>
+                    <span class="request-count" id="requestCount">0 طلب</span>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-inbox"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="totalRequests">0</span>
+                            <span class="stat-label">إجمالي الطلبات</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="pendingRequests">0</span>
+                            <span class="stat-label">قيد الانتظار</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="completedRequests">0</span>
+                            <span class="stat-label">مكتملة</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-wrapper">
+                    <table class="requests-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>الاسم</th>
+                                <th>البريد</th>
+                                <th>الهاتف</th>
+                                <th>نوع الموقع</th>
+                                <th>فكرة الموقع</th>
+                                <th>الميزات</th>
+                                <th>كيف سمع عنا</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsBody">
+                            <!-- Rows populated by JS -->
+                        </tbody>
+                    </table>
+                    <div class="empty-state" id="emptyState">
+                        <i class="fas fa-inbox fa-4x"></i>
+                        <p>لا توجد طلبات حتى الآن</p>
+                    </div>
+                </div>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="stats-cards">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-inbox"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-number" id="totalRequests">0</span>
-                        <span class="stat-label">إجمالي الطلبات</span>
+            <!-- ========================================== -->
+            <!-- ===== SECTION 2: صفحة الرسائل ===== -->
+            <!-- ========================================== -->
+            <div id="sectionMessages" class="section-content" style="display: none;">
+                <div class="dashboard-title">
+                    <h1><i class="fas fa-envelope"></i> إدارة الرسائل</h1>
+                    <span class="request-count" id="messageCount">0 رسالة</span>
+                </div>
+
+                <!-- Message Stats Cards -->
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #2563eb; color: white;"><i class="fas fa-paper-plane"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="sentMessages">0</span>
+                            <span class="stat-label">رسائل مبعوتة</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #22c55e; color: white;"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="readMessages">0</span>
+                            <span class="stat-label">رسائل متشافه</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #ef4444; color: white;"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="unreadMessages">0</span>
+                            <span class="stat-label">رسائل متشافتش</span>
+                        </div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-number" id="pendingRequests">0</span>
-                        <span class="stat-label">قيد الانتظار</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-number" id="completedRequests">0</span>
-                        <span class="stat-label">مكتملة</span>
+
+                <!-- Messages Table -->
+                <div class="table-wrapper">
+                    <table class="requests-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>إلى</th>
+                                <th>البريد</th>
+                                <th>العنوان</th>
+                                <th>الرسالة</th>
+                                <th>التاريخ</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messagesBody">
+                            <!-- Rows populated by JS -->
+                        </tbody>
+                    </table>
+                    <div class="empty-state" id="emptyMessages">
+                        <i class="fas fa-envelope-open fa-4x"></i>
+                        <p>لا توجد رسائل حتى الآن</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Table -->
-            <div class="table-wrapper">
-                <table class="requests-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>الاسم</th>
-                            <th>البريد</th>
-                            <th>الهاتف</th>
-                            <th>نوع الموقع</th>
-                            <th>فكرة الموقع</th>
-                            <th>الميزات</th>
-                            <th>كيف سمع عنا</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="requestsBody">
-                        <!-- Rows populated by JS -->
-                    </tbody>
-                </table>
-                <div class="empty-state" id="emptyState">
-                    <i class="fas fa-inbox fa-4x"></i>
-                    <p>لا توجد طلبات حتى الآن</p>
+            <!-- ========================================== -->
+            <!-- ===== SECTION 3: إرسال رسالة ===== -->
+            <!-- ========================================== -->
+            <div id="sectionSendMessage" class="section-content" style="display: none;">
+                <div class="dashboard-title">
+                    <h1><i class="fas fa-paper-plane"></i> إرسال رسالة جديدة</h1>
+                </div>
+
+                <div class="manual-email-section" style="border-color: #2563eb;">
+                    <div class="manual-email-body">
+                        <div class="form-group">
+                            <label for="sendEmailTo">إلى (البريد الإلكتروني)</label>
+                            <input type="email" id="sendEmailTo" placeholder="أدخل البريد الإلكتروني للمستلم" />
+                        </div>
+                        <div class="form-group">
+                            <label for="sendSubject">عنوان الرسالة</label>
+                            <input type="text" id="sendSubject" placeholder="أدخل عنوان الرسالة" />
+                        </div>
+                        <div class="form-group">
+                            <label for="sendMessage">نص الرسالة</label>
+                            <textarea id="sendMessage" rows="6" placeholder="اكتب نص الرسالة هنا..."></textarea>
+                        </div>
+                        <button class="btn-send-email" id="sendNewMessageBtn">
+                            <i class="fas fa-paper-plane"></i> إرسال الرسالة
+                        </button>
+                        <div class="email-status" id="sendMessageStatus"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- ===== MANUAL EMAIL SECTION ===== -->
-            <div class="manual-email-section" id="manualEmailSection" style="display: none;">
-                <div class="manual-email-header">
-                    <h2><i class="fas fa-envelope"></i> إرسال رسالة يدوية</h2>
-                    <button class="btn-close-email" id="closeEmailSection"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="manual-email-body">
-                    <div class="email-recipient">
-                        <label><strong>إلى:</strong></label>
-                        <span id="emailRecipient">example@email.com</span>
-                        <span style="margin-right: 20px;"><strong>الطلب:</strong> #<span id="emailRequestId">0</span></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="emailSubject">عنوان الرسالة</label>
-                        <input type="text" id="emailSubject" placeholder="أدخل عنوان الرسالة" />
-                    </div>
-                    <div class="form-group">
-                        <label for="emailMessage">نص الرسالة</label>
-                        <textarea id="emailMessage" rows="5" placeholder="اكتب نص الرسالة هنا..."></textarea>
-                    </div>
-                    <button class="btn-send-email" id="sendEmailBtn">
-                        <i class="fas fa-paper-plane"></i> إرسال الرسالة
-                    </button>
-                    <div class="email-status" id="emailStatus"></div>
-                </div>
-            </div>
         </div>
     </main>
 
