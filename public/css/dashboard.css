@@ -6,22 +6,24 @@
 
 body {
     font-family: 'Cairo', sans-serif;
-    background: #f1f5f9;
-    color: #1a1a2e;
+    background: #0a0e1a;
+    color: #e8edf5;
     direction: rtl;
 }
 
+/* ===== HEADER ===== */
 .dashboard-header {
-    background: #0a1628;
+    background: #060a14;
     color: white;
     padding: 12px 0;
     position: sticky;
     top: 0;
     z-index: 100;
+    border-bottom: 1px solid #1e293b;
 }
 
 .header-inner {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
     display: flex;
@@ -43,7 +45,7 @@ body {
 .dashboard-header .logo span {
     font-size: 20px;
     font-weight: 800;
-    color: white;
+    color: #2563eb;
 }
 
 .dashboard-nav {
@@ -55,10 +57,12 @@ body {
 .dashboard-user {
     font-size: 14px;
     opacity: 0.7;
+    color: #94a3b8;
 }
 
 .dashboard-user i {
     margin-left: 6px;
+    color: #2563eb;
 }
 
 .btn-logout {
@@ -76,8 +80,9 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* ===== MAIN ===== */
 .dashboard-main {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 30px 20px;
 }
@@ -94,6 +99,7 @@ body {
 .dashboard-title h1 {
     font-size: 28px;
     font-weight: 700;
+    color: #e8edf5;
 }
 
 .dashboard-title h1 i {
@@ -110,7 +116,7 @@ body {
     font-weight: 600;
 }
 
-/* Stats Cards */
+/* ===== STATS CARDS ===== */
 .stats-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -119,21 +125,26 @@ body {
 }
 
 .stat-card {
-    background: white;
+    background: #111827;
     padding: 20px 24px;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #1e293b;
     display: flex;
     align-items: center;
     gap: 16px;
-    border: 1px solid #e5e7eb;
+    transition: all 0.3s;
+}
+
+.stat-card:hover {
+    border-color: #2563eb;
+    transform: translateY(-2px);
 }
 
 .stat-icon {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: #dbeafe;
+    background: #1e293b;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -150,21 +161,21 @@ body {
 .stat-number {
     font-size: 28px;
     font-weight: 800;
-    color: #1a1a2e;
+    color: #e8edf5;
 }
 
 .stat-label {
     font-size: 13px;
-    color: #6b7280;
+    color: #94a3b8;
 }
 
-/* Table */
+/* ===== TABLE ===== */
 .table-wrapper {
-    background: white;
+    background: #111827;
     border-radius: 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #1e293b;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .requests-table {
@@ -174,28 +185,33 @@ body {
 }
 
 .requests-table thead {
-    background: #f8fafc;
+    background: #0a0e1a;
 }
 
 .requests-table th {
     padding: 14px 16px;
     text-align: right;
     font-weight: 700;
-    color: #4a4a6a;
-    border-bottom: 2px solid #e5e7eb;
+    color: #94a3b8;
+    border-bottom: 2px solid #1e293b;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .requests-table td {
     padding: 14px 16px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #1a1d2e;
     vertical-align: middle;
+    color: #e8edf5;
 }
 
 .requests-table tbody tr:hover {
-    background: #f8fafc;
+    background: #0a0e1a;
 }
 
-.requests-table .status-badge {
+/* ===== STATUS BADGE ===== */
+.status-badge {
     display: inline-block;
     padding: 4px 12px;
     border-radius: 20px;
@@ -213,6 +229,7 @@ body {
     color: #059669;
 }
 
+/* ===== BUTTONS ===== */
 .btn-complete {
     padding: 6px 16px;
     background: #2563eb;
@@ -223,25 +240,25 @@ body {
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
+    transition: all 0.3s;
 }
 
-.btn-complete:hover {
+.btn-complete:hover:not(:disabled) {
     background: #1d4ed8;
     transform: scale(1.02);
 }
 
 .btn-complete:disabled {
-    background: #9ca3af;
+    background: #475569;
     cursor: not-allowed;
-    transform: none;
+    opacity: 0.6;
 }
 
 .btn-delete {
     padding: 6px 12px;
     background: transparent;
-    color: #dc2626;
-    border: 1px solid #fca5a5;
+    color: #ef4444;
+    border: 1px solid #7f1d1d;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
@@ -252,17 +269,18 @@ body {
 }
 
 .btn-delete:hover {
-    background: #fee2e2;
+    background: #7f1d1d;
+    color: white;
 }
 
-/* Empty State */
+/* ===== EMPTY STATE ===== */
 .empty-state {
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 60px 20px;
-    color: #9ca3af;
+    color: #64748b;
 }
 
 .empty-state.show {
@@ -272,9 +290,20 @@ body {
 .empty-state i {
     margin-bottom: 16px;
     opacity: 0.3;
+    color: #2563eb;
 }
 
-/* Responsive */
+.empty-state p {
+    font-size: 16px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+    .stats-cards {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .stats-cards {
         grid-template-columns: 1fr;
@@ -282,6 +311,7 @@ body {
 
     .requests-table {
         font-size: 13px;
+        min-width: 900px;
     }
 
     .requests-table th,
@@ -299,13 +329,8 @@ body {
         font-size: 12px;
     }
 
-    /* Horizontal scroll for table on mobile */
     .table-wrapper {
         overflow-x: auto;
-    }
-
-    .requests-table {
-        min-width: 700px;
     }
 }
 
@@ -315,5 +340,9 @@ body {
     }
     .dashboard-user span {
         display: none;
+    }
+    .dashboard-title {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
