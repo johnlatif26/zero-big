@@ -1,3 +1,4 @@
+// ===== LOAD ENVIRONMENT VARIABLES =====
 require('dotenv').config();
 
 const express = require('express');
@@ -6,6 +7,39 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+// ============================================
+// ===== DATABASE (JSON FILE) =====
+// ============================================
+const DB_FILE = path.join(__dirname, 'data.json');
+
+// Ensure data.json exists
+if (!fs.existsSync(DB_FILE)) {
+    fs.writeFileSync(DB_FILE, JSON.stringify({ requests: [], idCounter: 1 }, null, 2));
+}
+
+// ===== READ DATABASE =====
+function readDB() {
+    try {
+        const data = fs.readFileSync(DB_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.error('Error reading DB:', error);
+        return { requests: [], idCounter: 1 };
+    }
+}
+
+// ===== WRITE DATABASE =====
+function writeDB(data) {
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error writing DB:', error);
+        return false;
+    }
+}
 
 // ============================================
 // ===== FIREBASE INITIALIZATION =====
@@ -31,12 +65,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-
-// ============================================
-// ===== IN-MEMORY STORAGE =====
-// ============================================
-let projectRequests = [];
-let idCounter = 1;
 
 // ============================================
 // ===== JWT AUTHENTICATION =====
@@ -67,7 +95,7 @@ function authenticateToken(req, res, next) {
 }
 
 // ============================================
-// ===== SMTP 1: AUTO-REPLY EMAIL (GMAIL) =====
+// ===== SMTP 1: AUTO-REPLY EMAIL =====
 // ============================================
 const autoTransporter = nodemailer.createTransport({
     host: process.env.AUTO_SMTP_HOST || 'smtp.gmail.com',
@@ -96,13 +124,12 @@ const manualTransporter = nodemailer.createTransport({
 // ===== EMAIL SENDING FUNCTIONS =====
 // ============================================
 
-// === AUTO-REPLY EMAIL (من SMTP الأول) ===
+// === AUTO-REPLY EMAIL ===
 async function sendAutoReply(toEmail, subject, message, requestId = null) {
     try {
         if (!process.env.AUTO_SMTP_USER || !process.env.AUTO_SMTP_PASS) {
             console.log('📧 [DEV MODE - AUTO] Email would be sent to:', toEmail);
             console.log(`   Subject: ${subject}`);
-            console.log(`   Message: ${message}`);
             return true;
         }
 
@@ -143,26 +170,21 @@ async function sendAutoReply(toEmail, subject, message, requestId = null) {
             `
         };
 
-        const info = await autoTransporter.sendMail(mailOptions);
+        await autoTransporter.sendMail(mailOptions);
         console.log('✅ [AUTO] Email sent to:', toEmail);
-        console.log('   Message ID:', info.messageId);
         return true;
     } catch (error) {
-        console.error('❌ [AUTO] Error sending email:', error.message);
-        if (error.code === 'EAUTH') {
-            console.error('   🔑 Authentication failed. Check your AUTO SMTP credentials.');
-        }
+        console.error('❌ [AUTO] Error:', error.message);
         return false;
     }
 }
 
-// === MANUAL EMAIL (من SMTP الثاني - للداشبورد) ===
+// === MANUAL EMAIL ===
 async function sendManualEmail(toEmail, subject, message, requestId = null) {
     try {
         if (!process.env.MANUAL_SMTP_USER || !process.env.MANUAL_SMTP_PASS) {
             console.log('📧 [DEV MODE - MANUAL] Email would be sent to:', toEmail);
             console.log(`   Subject: ${subject}`);
-            console.log(`   Message: ${message}`);
             return true;
         }
 
@@ -203,15 +225,11 @@ async function sendManualEmail(toEmail, subject, message, requestId = null) {
             `
         };
 
-        const info = await manualTransporter.sendMail(mailOptions);
+        await manualTransporter.sendMail(mailOptions);
         console.log('✅ [MANUAL] Email sent to:', toEmail);
-        console.log('   Message ID:', info.messageId);
         return true;
     } catch (error) {
-        console.error('❌ [MANUAL] Error sending email:', error.message);
-        if (error.code === 'EAUTH') {
-            console.error('   🔑 Authentication failed. Check your MANUAL SMTP credentials.');
-        }
+        console.error('❌ [MANUAL] Error:', error.message);
         return false;
     }
 }
@@ -301,7 +319,8 @@ app.post('/api/auth/verify', (req, res) => {
  */
 app.get('/api/requests', authenticateToken, (req, res) => {
     try {
-        const sorted = [...projectRequests].reverse();
+        const db = readDB();
+        const sorted = [...db.requests].reverse();
         res.json(sorted);
     } catch (error) {
         console.error('Error fetching requests:', error);
@@ -314,7 +333,6 @@ app.get('/api/requests', authenticateToken, (req, res) => {
 
 /**
  * POST /api/submit-project - Submit a new project request
- * Uses AUTO SMTP for auto-reply
  */
 app.post('/api/submit-project', async (req, res) => {
     try {
@@ -344,9 +362,12 @@ app.post('/api/submit-project', async (req, res) => {
             });
         }
 
+        // Read current DB
+        const db = readDB();
+        
         // Create new request
         const newRequest = {
-            id: String(idCounter++),
+            id: String(db.idCounter++),
             fullName: fullName.trim(),
             email: email.trim(),
             phone: phone.trim(),
@@ -358,13 +379,16 @@ app.post('/api/submit-project', async (req, res) => {
             createdAt: new Date().toISOString()
         };
 
-        projectRequests.push(newRequest);
-        console.log('📝 New project request:', newRequest.fullName);
+        // Save to database
+        db.requests.push(newRequest);
+        writeDB(db);
+
+        console.log('📝 New project request saved to DB:', newRequest.fullName);
         console.log('   📧 Email:', newRequest.email);
         console.log('   📱 Phone:', newRequest.phone);
         console.log('   🏷️ Type:', newRequest.projectType);
 
-        // === Send AUTO-REPLY email using AUTO SMTP ===
+        // Send AUTO-REPLY email
         const emailMessage = `
             <div style="font-size: 16px; line-height: 1.8;">
                 <p>مرحباً <strong>${fullName}</strong>،</p>
@@ -399,12 +423,12 @@ app.post('/api/submit-project', async (req, res) => {
 
 /**
  * PATCH /api/requests/:id/complete - Mark request as completed
- * Uses MANUAL SMTP for manual dashboard email
  */
 app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const request = projectRequests.find(r => r.id === id);
+        const db = readDB();
+        const request = db.requests.find(r => r.id === id);
 
         if (!request) {
             return res.status(404).json({
@@ -422,30 +446,13 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
 
         request.status = 'completed';
         request.completedAt = new Date().toISOString();
+        writeDB(db);
 
         console.log(`✅ Request ${id} completed for:`, request.fullName);
 
-        // === Send MANUAL email using MANUAL SMTP ===
-        const emailMessage = `
-            <div style="font-size: 16px; line-height: 1.8;">
-                <p>مرحباً <strong>${request.fullName}</strong>،</p>
-                <p>نشكركم على ثقتكم بنا في <strong style="color: #2563eb;">Zero Big</strong>.</p>
-                <p>تم استقبال طلبكم الخاص بـ <strong>${request.projectType}</strong> بنجاح.</p>
-                <p><strong>رقم الطلب:</strong> #${request.id}</p>
-                <div style="background: #111827; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #1e293b;">
-                    <p style="margin: 0; font-size: 18px; font-weight: 600; color: #2563eb;">
-                        ✅ تم مراجعة طلبكم وسيتم التواصل معكم قريباً
-                    </p>
-                </div>
-                <p style="color: #94a3b8; font-size: 14px;">شكراً لثقتكم بنا.</p>
-            </div>
-        `;
-
-        sendManualEmail(request.email, '✅ تم مراجعة طلبكم - Zero Big', emailMessage, request.id);
-
         res.json({
             success: true,
-            message: 'تم تحديث حالة الطلب وإرسال إشعار للعميل',
+            message: 'تم تحديث حالة الطلب',
             data: request
         });
 
@@ -459,12 +466,94 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
 });
 
 /**
+ * POST /api/send-manual-email - Send manual email from dashboard
+ */
+app.post('/api/send-manual-email', authenticateToken, async (req, res) => {
+    try {
+        const { requestId, subject, message } = req.body;
+
+        if (!requestId || !subject || !message) {
+            return res.status(400).json({
+                success: false,
+                message: 'جميع الحقول مطلوبة (requestId, subject, message)'
+            });
+        }
+
+        const db = readDB();
+        const request = db.requests.find(r => r.id === requestId);
+
+        if (!request) {
+            return res.status(404).json({
+                success: false,
+                message: 'الطلب غير موجود'
+            });
+        }
+
+        // Send manual email
+        const emailMessage = `
+            <div style="font-size: 16px; line-height: 1.8;">
+                <p>مرحباً <strong>${request.fullName}</strong>،</p>
+                ${message.replace(/\n/g, '<br />')}
+                <div style="background: #111827; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #1e293b;">
+                    <p style="margin: 0; font-size: 14px; color: #94a3b8;">
+                        <strong style="color: #2563eb;">رقم الطلب:</strong> #${request.id}
+                    </p>
+                </div>
+                <p style="color: #94a3b8; font-size: 14px;">شكراً لثقتكم بنا.</p>
+            </div>
+        `;
+
+        const success = await sendManualEmail(
+            request.email,
+            subject || `📩 رسالة من فريق Zero Big - طلب #${request.id}`,
+            emailMessage,
+            request.id
+        );
+
+        if (success) {
+            // Log the manual email sent
+            console.log(`📨 Manual email sent to ${request.email} for request #${request.id}`);
+            
+            // Store email history in request
+            if (!request.emailHistory) {
+                request.emailHistory = [];
+            }
+            request.emailHistory.push({
+                subject: subject,
+                message: message,
+                sentAt: new Date().toISOString(),
+                sentBy: req.user.username
+            });
+            writeDB(db);
+
+            res.json({
+                success: true,
+                message: 'تم إرسال البريد الإلكتروني بنجاح'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error sending manual email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'حدث خطأ في الخادم'
+        });
+    }
+});
+
+/**
  * DELETE /api/requests/:id - Delete a request
  */
 app.delete('/api/requests/:id', authenticateToken, (req, res) => {
     try {
         const { id } = req.params;
-        const index = projectRequests.findIndex(r => r.id === id);
+        const db = readDB();
+        const index = db.requests.findIndex(r => r.id === id);
 
         if (index === -1) {
             return res.status(404).json({
@@ -473,8 +562,10 @@ app.delete('/api/requests/:id', authenticateToken, (req, res) => {
             });
         }
 
-        const deleted = projectRequests[index];
-        projectRequests.splice(index, 1);
+        const deleted = db.requests[index];
+        db.requests.splice(index, 1);
+        writeDB(db);
+
         console.log(`🗑️ Request ${id} deleted for:`, deleted.fullName);
 
         res.json({
@@ -496,9 +587,10 @@ app.delete('/api/requests/:id', authenticateToken, (req, res) => {
  */
 app.get('/api/stats', authenticateToken, (req, res) => {
     try {
-        const total = projectRequests.length;
-        const pending = projectRequests.filter(r => r.status === 'pending').length;
-        const completed = projectRequests.filter(r => r.status === 'completed').length;
+        const db = readDB();
+        const total = db.requests.length;
+        const pending = db.requests.filter(r => r.status === 'pending').length;
+        const completed = db.requests.filter(r => r.status === 'completed').length;
 
         res.json({
             success: true,
@@ -557,8 +649,7 @@ app.listen(PORT, () => {
     ║                                                                      ║
     ║   📧 AUTO SMTP: ${process.env.AUTO_SMTP_USER ? '✅ Configured' : '❌ Not configured'}
     ║   📧 MANUAL SMTP: ${process.env.MANUAL_SMTP_USER ? '✅ Configured' : '❌ Not configured'}
-    ║   🔑 JWT: ${process.env.JWT_SECRET ? '✅ Configured' : '⚠️ Using default'}
-    ║   🔥 Firebase: ${firebaseConfig ? '✅ Loaded' : '❌ Not loaded'}
+    ║   📁 Database: ${DB_FILE}
     ║                                                                      ║
     ╚══════════════════════════════════════════════════════════════════════╝
     `);
